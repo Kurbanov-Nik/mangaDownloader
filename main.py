@@ -6,7 +6,7 @@ import time
 
 def getMangaPathName(url):
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
-    return pattern.search(url).group(0)
+    return url.split("?")[0][pattern.search(url).start():]
 
 def getFirstResponse(url):
     header = {
@@ -49,15 +49,20 @@ def getMangaInfo(mangaPathName):
     }
     url = "https://api.cdnlibs.org/api/manga/" + mangaPathName
     response = requests.request("GET", url, headers = header, params = querystring)
-    with open("data.json", "w", encoding = 'utf-8') as f:
-        json.dump(response.json(), f, ensure_ascii = False, indent=4)
+    with open("mangaInfo.json", "w", encoding = 'utf-8') as f:
+        json.dump(response.json(), f, ensure_ascii = False, indent = 4)
+    info.update(response.json()['data'])
+    return info
+
+def getMangaChapterInfo(mangaPathName):
 
     pass
 
 def main():
     url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
     mangaPathName = getMangaPathName(url)
-    getMangaInfo(mangaPathName)
+    mangaInfo = getMangaInfo(mangaPathName)
+    chaptersInfo = getMangaChapterInfo(mangaPathName)
 
 if __name__ == "__main__":
     main()
