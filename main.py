@@ -19,7 +19,7 @@ def getFirstResponse(url):
 def getCookiesFromResponse():
     pass
 
-def getMangaInfo(mangaPathName):
+def getMangaInfo(mangaPathName, header):
     url = "https://mangalib.me/ru/manga/" + mangaPathName + "?section=info"
     response = getFirstResponse(url)
     # getCookiesFromResponse()
@@ -30,16 +30,6 @@ def getMangaInfo(mangaPathName):
     else:
         return info
 
-    header = {
-        "Client-Time-Zone": "Europe/Moscow",
-        "Content-Type": "application/json",
-        "Referer": "https://mangalib.me/",
-        'sec-ch-ua': "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
-        'sec-ch-ua-mobile': "?0",
-        'sec-ch-ua-platform': "\"Windows\"",
-        'Site-Id': "1",  # important field
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-    }
     querystring = {
         "fields[]": ["background", "eng_name", "otherNames", "summary", "releaseDate", "type_id", "caution",
                          "views", "close_view", "rate_avg", "rate", "genres", "tags", "teams", "user", "franchise",
@@ -52,23 +42,31 @@ def getMangaInfo(mangaPathName):
     info.update(response.json()['data'])
     return info
 
-def getMangaChapterInfo(mangaPathName):
-
-    pass
+def getMangaChapterInfo(mangaPathName, header):
+    url = "https://api.cdnlibs.org/api/manga/" + mangaPathName + "/chapters"
+    response = requests.request("GET", url, headers = header)
+    return response.json()['data']
 
 def main():
     url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
+    header = {
+        "Client-Time-Zone": "Europe/Moscow",
+        "Content-Type": "application/json",
+        "Referer": "https://mangalib.me/",
+        'sec-ch-ua': "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
+        'sec-ch-ua-mobile': "?0",
+        'sec-ch-ua-platform': "\"Windows\"",
+        'Site-Id': "1",  # important field
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    }
     mangaPathName = getMangaPathName(url)
-    mangaInfo = getMangaInfo(mangaPathName)
+    mangaInfo = getMangaInfo(mangaPathName, header)
     if not mangaInfo['available-status']:
         print("Указанной страницы не существует!")
         return
     mangaOrigName = mangaInfo['name']
     mangaRusName = mangaInfo['rus_name']
-    translateTeams = []
-    for team in mangaInfo['teams']:
-        translateTeams.append([team['id'], team['name']])
-    chaptersInfo = getMangaChapterInfo(mangaPathName)
+    chaptersInfo = getMangaChapterInfo(mangaPathName, header)
 
 if __name__ == "__main__":
     main()
