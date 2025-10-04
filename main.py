@@ -1,10 +1,10 @@
-import requests
-import json
-import random as rand
 import re
-import time
+import requests
+import os
+import json
 
-def getMangaPathName(url):
+
+def getUrlMangaName(url):
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
     return url.split("?")[0][pattern.search(url).start():]
 
@@ -16,39 +16,33 @@ def getFirstResponse(url):
     response = requests.request("GET", url = url, headers = header)
     return response
 
-def getCookiesFromResponse():
-    pass
-
-def getMangaInfo(mangaPathName, header):
-    url = "https://mangalib.me/ru/manga/" + mangaPathName + "?section=info"
-    response = getFirstResponse(url)
-    # getCookiesFromResponse()
-    info = {"available-status": False}
-
-    if response.status_code == 200:
-        info["available-status"] = True
-    else:
-        return info
-
-    querystring = {
-        "fields[]": ["background", "eng_name", "otherNames", "summary", "releaseDate", "type_id", "caution",
-                         "views", "close_view", "rate_avg", "rate", "genres", "tags", "teams", "user", "franchise",
-                         "authors", "publisher", "userRating", "moderated", "metadata", "metadata.count",
-                         "metadata.close_comments", "manga_status_id", "chap_count", "status_id", "artists",
-                         "format"]
+def getAboutInfo(urlMangaName, header):
+    queryParams = {
+        "fields[]":
+            ["background", "eng_name", "otherNames", "summary", "releaseDate", "type_id", "caution",
+             "views", "close_view", "rate_avg", "rate", "genres", "tags", "teams", "user", "franchise",
+             "authors", "publisher", "userRating", "moderated", "metadata", "metadata.count",
+             "metadata.close_comments", "manga_status_id", "chap_count", "status_id", "artists", "format"]
     }
-    url = "https://api.cdnlibs.org/api/manga/" + mangaPathName
-    response = requests.request("GET", url, headers = header, params = querystring)
-    info.update(response.json()['data'])
-    return info
+    url = "https://api.cdnlibs.org/api/manga/" + urlMangaName
+    response = requests.request("GET", url, headers = header, params = queryParams)
+    return response.json()
 
-def getMangaChapterInfo(mangaPathName, header):
-    url = "https://api.cdnlibs.org/api/manga/" + mangaPathName + "/chapters"
+def getChaptersInfo(urlMangaName, header):
+    url = "https://api.cdnlibs.org/api/manga/" + urlMangaName + "/chapters"
     response = requests.request("GET", url, headers = header)
-    return response.json()['data']
+    return response.json()
 
-def main():
-    url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
+def collectMangaInfo(url):
+    urlMangaName = getUrlMangaName(url)
+    url = "https://mangalib.me/ru/manga/" + urlMangaName + "?section=info"
+    response = getFirstResponse(url)
+    if not response.status_code == 200:
+        print("Error: %d" % response.status_code)
+        return
+
+    if not os.path.exists(urlMangaName):
+        os.mkdir(urlMangaName)
     header = {
         "Client-Time-Zone": "Europe/Moscow",
         "Content-Type": "application/json",
@@ -59,14 +53,16 @@ def main():
         'Site-Id': "1",  # important field
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
     }
-    mangaPathName = getMangaPathName(url)
-    mangaInfo = getMangaInfo(mangaPathName, header)
-    if not mangaInfo['available-status']:
-        print("Указанной страницы не существует!")
-        return
-    mangaOrigName = mangaInfo['name']
-    mangaRusName = mangaInfo['rus_name']
-    chaptersInfo = getMangaChapterInfo(mangaPathName, header)
+    aboutInfo = getAboutInfo(urlMangaName, header)
+    with open("%s\\aboutInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
+        json.dump(aboutInfo, file, ensure_ascii = False, indent = 4)
+    chaptersInfo = getChaptersInfo(urlMangaName, header)
+    with open("%s\\chaptersInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
+        json.dump(chaptersInfo, file, ensure_ascii = False, indent = 4)
+
+def main():
+    url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
+    collectMangaInfo(url)
 
 if __name__ == "__main__":
     main()
