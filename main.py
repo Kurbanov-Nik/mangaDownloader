@@ -49,8 +49,6 @@ def getMangaInfo(mangaPathName):
     }
     url = "https://api.cdnlibs.org/api/manga/" + mangaPathName
     response = requests.request("GET", url, headers = header, params = querystring)
-    with open("mangaInfo.json", "w", encoding = 'utf-8') as f:
-        json.dump(response.json(), f, ensure_ascii = False, indent = 4)
     info.update(response.json()['data'])
     return info
 
@@ -62,6 +60,14 @@ def main():
     url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
     mangaPathName = getMangaPathName(url)
     mangaInfo = getMangaInfo(mangaPathName)
+    if not mangaInfo['available-status']:
+        print("Указанной страницы не существует!")
+        return
+    mangaOrigName = mangaInfo['name']
+    mangaRusName = mangaInfo['rus_name']
+    translateTeams = []
+    for team in mangaInfo['teams']:
+        translateTeams.append([team['id'], team['name']])
     chaptersInfo = getMangaChapterInfo(mangaPathName)
 
 if __name__ == "__main__":
