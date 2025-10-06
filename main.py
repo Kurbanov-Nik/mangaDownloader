@@ -56,12 +56,17 @@ def collectMangaInfo(url):
     aboutInfo = getAboutInfo(urlMangaName, header)
     with open("%s\\aboutInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
         json.dump(aboutInfo, file, ensure_ascii = False, indent = 4)
+    # Age Restriction Titles (18+) can not download, because need authorization
+    if aboutInfo["data"]["ageRestriction"]["id"] == 4:
+        print("Ограничение 18+ : необходима авторизация на сайте")
+        return
+    # header["Authorization"] = "token"
     chaptersInfo = getChaptersInfo(urlMangaName, header)
     with open("%s\\chaptersInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
         json.dump(chaptersInfo, file, ensure_ascii = False, indent = 4)
 
 def main():
-    url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan"
+    url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan" # Авто-охота с клонами
     collectMangaInfo(url)
 
 if __name__ == "__main__":
