@@ -65,9 +65,98 @@ def collectMangaInfo(url):
     with open("%s\\chaptersInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
         json.dump(chaptersInfo, file, ensure_ascii = False, indent = 4)
 
+def getTranslateBranchesInfo(url):
+    urlMangaName = getUrlMangaName(url)
+    if not os.path.exists("%s/chaptersInfo.json" % urlMangaName):
+        return
+    with open("%s/chaptersInfo.json" % urlMangaName, "r", encoding = "utf-8") as file:
+        chaptersInfo = json.load(file)["data"]
+    branchesInfo = []
+    for chapter in chaptersInfo:
+        for branch in chapter["branches"]:
+            idB = branch["branch_id"]
+            teams = []
+            for team in branch["teams"]:
+                teams.append(team["name"])
+            user = branch["user"]["username"]
+            tempBranch = {"id": idB, "teams": teams, "user": user, "n": chapter["number"]}
+            i = 0
+            for branchElem in branchesInfo:
+                if tempBranch["id"] == branchElem["id"]:
+                    for team in tempBranch["teams"]:
+                        if not team in branchElem["teams"]:
+                            branchesInfo[i]["teams"].append(team)
+                    if not tempBranch["user"] in branchElem["users"]:
+                        branchesInfo[i]["users"].append(tempBranch["user"])
+                    branchesInfo[i]["n"].append(tempBranch["n"])
+                    break
+                i += 1
+            if i == len(branchesInfo):
+                branchesInfo.append(
+                    {"id": tempBranch["id"],
+                     "teams": tempBranch["teams"],
+                     "users": [tempBranch["user"]],
+                     "n": [tempBranch["n"]]}
+                )
+    return branchesInfo
+
+def printBranchesInfo(branchesInfo):
+    line = "Всего веток: %d\n" % len(branchesInfo)
+    i = 1
+    for branch in branchesInfo:
+        lineB = "Ветка #%d\nКоманды:" % i
+        for team in branch["teams"]:
+            lineB += " %s; " % team
+        lineB += "| Пользователи: "
+        for user in branch["users"]:
+            lineB += "%s; " % user
+        lineB += "\nПереведены: %s" % branch["n"][0]
+        extr = 0
+        for j in range(1, len(branch["n"])):
+            if branch["n"][j].isdigit():
+                if int(branch["n"][j]) - int(branch["n"][j - 1].split(".")[0]) == 1:
+                    continue
+                else:
+                    if j + 1 < len(branch["n"]) - 1:
+                        lineB += "..%s, %s" % (branch["n"][j], branch["n"][j + 1].split(".")[0])
+                    else:
+                        break
+            else:
+                extr += 1
+        lineB += "..%s" % branch["n"][-1].split(".")[0]
+        if extr > 0:
+            lineB += " + %d экстра" % extr
+        line += lineB + "\n"
+        i += 1
+    print(line)
+
+def userBranchSelection(branchAmount):
+    while True:
+        num = input("Выберите ветку: ")
+        if not num.isdigit():
+            print("Ошибка: введите цифру")
+            continue
+        if int(num) > branchAmount or int(num) < branchAmount:
+            print("Ошибка: введите цифру в диапазоне от %d до %d" % (1, branchAmount))
+            continue
+        break
+    return int(num)
+
+def dowloadChapters(branchInfo):
+    pass
+
 def main():
-    url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan" # Авто-охота с клонами
+    # url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan" # Авто-охота с клонами
+    # url = "https://mangalib.me/ru/manga/12668--dwaejiuri-" # Свинарник
+    url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari" # Монохромная пара
+    # url = "https://mangalib.me/ru/manga/57093--aisha" # Айша
     collectMangaInfo(url)
+    branchesInfo = getTranslateBranchesInfo(url)
+    printBranchesInfo(branchesInfo)
+    branchIndx = 0
+    if len(branchesInfo) > 1:
+        branchIndx = userBranchSelection(len(branchesInfo))
+    dowloadChapters(branchesInfo[branchIndx])
 
 if __name__ == "__main__":
     main()
