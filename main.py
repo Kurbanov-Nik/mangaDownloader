@@ -10,6 +10,15 @@ def getUrlMangaName(url):
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
     return url.split("?")[0][pattern.search(url).start():]
 
+def choiceSleepTime():
+    timeFuncs = [lambda: 3 + rand.random() + rand.random(),
+         lambda: 5 + rand.random() * 5,
+         lambda: 10 + rand.random() * 10,
+         lambda: 20 + rand.random() * 15 + rand.random(),
+         lambda: 180 + rand.random() * 20]
+    funcsWeights = [0.1, 0.40, 0.32, 0.15, 0.03]
+    return rand.choices(timeFuncs, funcsWeights, k = 1)[0]()
+
 def getFirstResponse(url):
     header = {
         "Referer": "https://mangalib.me/",
@@ -192,7 +201,9 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
             with open("%s/vol.%s/chp.%s/%d.jpg" % (urlMangaName, volume, chapter, j), 'wb') as file:
                 file.write(img.content)
             j += 1
-            time.sleep(7 + int(rand.random() * 10))
+            timeSpleep = choiceSleepTime()
+            print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSpleep))
+            time.sleep(timeSpleep)
         break
 
 def main():
