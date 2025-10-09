@@ -5,18 +5,17 @@ import json
 import time
 import random as rand
 
-
 def getUrlMangaName(url):
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
     return url.split("?")[0][pattern.search(url).start():]
 
 def choiceSleepTime():
-    timeFuncs = [lambda: 3 + rand.random() + rand.random(),
+    timeFuncs = [lambda: 3.25 + rand.random(),
          lambda: 5 + rand.random() * 5,
          lambda: 10 + rand.random() * 10,
-         lambda: 20 + rand.random() * 15 + rand.random(),
-         lambda: 180 + rand.random() * 20]
-    funcsWeights = [0.1, 0.40, 0.32, 0.15, 0.03]
+         lambda: 20 + rand.random() * 7 * rand.choice([1, -1]),
+         lambda: 180 + rand.random() * rand.choice([15, 20, 25]) * rand.choice([1, -1])]
+    funcsWeights = [0.1, 0.45, 0.34, 0.1, 0.01]
     return rand.choices(timeFuncs, funcsWeights, k = 1)[0]()
 
 def getFirstResponse(url):
@@ -183,7 +182,7 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
         queryString["branch_id"] = str(branchInfo["id"])
     for chapter in branchInfo["n"]:
         volume = "1"
-        for i in range(0, len(numbersByVolumes)):
+        for i in range(len(numbersByVolumes)):
             if chapter in numbersByVolumes[i]:
                 volume = str(i + 1)
                 break
@@ -194,23 +193,25 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
         savePath = "%s\\vol.%s\\chp.%s" % (urlMangaName, volume, chapter)
         if not os.path.exists(savePath):
             os.makedirs(savePath)
-        j = 1
-        for page in chapterInfo["data"]["pages"]:
+        for j, page in enumerate(chapterInfo["data"]["pages"]):
             imgUrl = "https://img3.mixlib.me" + page["url"]
             img = requests.get(imgUrl, headers = header)
-            with open("%s/vol.%s/chp.%s/%d.jpg" % (urlMangaName, volume, chapter, j), 'wb') as file:
+            with open("%s/vol.%s/chp.%s/%d.jpg" % (urlMangaName, volume, chapter, j + 1), 'wb') as file:
                 file.write(img.content)
-            j += 1
-            timeSpleep = choiceSleepTime()
-            print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSpleep))
-            time.sleep(timeSpleep)
-        break
+            timeSleep = choiceSleepTime()
+            print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSleep))
+            time.sleep(timeSleep)
+        # break
+
+def userDialogueThroughConsole():
+    pass
 
 def main():
     # url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan" # Авто-охота с клонами
     # url = "https://mangalib.me/ru/manga/12668--dwaejiuri-" # Свинарник
-    url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari" # Монохромная пара
+    # url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari" # Монохромная пара
     # url = "https://mangalib.me/ru/manga/57093--aisha" # Айша
+    url = "https://mangalib.me/ru/manga/52978--bibliomania"
     collectMangaInfo(url)
     branchesInfo, numbersByVolumes = getTranslateBranchesInfo(url)
     printBranchesInfo(branchesInfo)
