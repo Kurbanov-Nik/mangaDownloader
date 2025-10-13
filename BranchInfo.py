@@ -1,10 +1,10 @@
 class BranchInfo:
     def __init__(self):
-        self.branchID = None
-        self.chapters = []
+        self.chapters = [] # id, publishDate, publishUser, teams_id, restrictedView
         self.teams = {}
+        self.users = {}
 
-    def setInfo(self, data):
+    def addChapter(self):
         pass
 
     def __str__(self):
