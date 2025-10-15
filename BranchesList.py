@@ -1,4 +1,4 @@
-import BranchInfo
+from BranchInfo import BranchInfo
 from extraFunctions import getCardinalNumeralEnding
 
 class BranchesList:
@@ -7,13 +7,13 @@ class BranchesList:
 
     def addChapter(self, chapter):
         for branch in chapter["branches"]:
-            curTeams = []
+            branchTeams = []
             for team in branch["teams"]:
-                curTeams.append((team["id"], team["name"]))
+                branchTeams.append((team["id"], team["name"]))
             self.branchesList.setdefault(branch["id"], BranchInfo()).addChapter({
                 "chapterIndex": chapter["index"] - 1,
                 "publishDate": branch["created_at"],
-                "teams": curTeams,
+                "teams": branchTeams,
                 "publishUser": (branch["user"]["id"], branch["user"]["username"]),
                 "restrictedView": True if branch["restricted_view"] else False})
 
