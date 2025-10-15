@@ -3,11 +3,19 @@ from extraFunctions import getCardinalNumeralEnding
 
 class BranchesList:
     def __init__(self):
-        self.branchesList = {} # branch_id, class BranchInfo
+        self.branchesList = {}
 
     def addChapter(self, chapter):
         for branch in chapter["branches"]:
-            self.branchesList.setdefault(branch["id"], BranchInfo()).addChapter(chapter)
+            curTeams = []
+            for team in branch["teams"]:
+                curTeams.append((team["id"], team["name"]))
+            self.branchesList.setdefault(branch["id"], BranchInfo()).addChapter({
+                "chapterIndex": chapter["index"] - 1,
+                "publishDate": branch["created_at"],
+                "teams": curTeams,
+                "publishUser": (branch["user"]["id"], branch["user"]["username"]),
+                "restrictedView": True if branch["restricted_view"] else False})
 
     def getBranchesAmount(self):
         return len(self.branchesList)
