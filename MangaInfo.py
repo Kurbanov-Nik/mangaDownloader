@@ -1,21 +1,29 @@
-import ChaptersList
+from ChaptersList import ChaptersList
+from BranchesList import BranchesList
 
 class MangaInfo:
-    def __init__(self, **kwargs):
-        self.id: int = kwargs["id"]
-        self.name: str = kwargs["name"]
-        self.ageRestriction: tuple = kwargs["ageRestriction"]
-        self.type: tuple = kwargs["type"]
-        self.closeView: bool = kwargs["closeView"]
-        self.releaseDate: str = kwargs["releaseDate"]
-        self.status: tuple = kwargs["status"]
-        self.scanlateStatus: tuple = kwargs["scanlateStatus"]
-        self.branches = []
+    def __init__(self, manga):
+        self.id = manga["id"]
+        self.name = manga["name"]
+        self.ageRestriction = manga["ageRestriction"]
+        self.type = manga["type"]
+        self.closeView = manga["closeView"]
+        self.releaseDate = manga["releaseDate"]
+        self.status = manga["status"]
+        self.scanlateStatus = manga["scanlateStatus"]
+        self.branches = BranchesList()
         self.chapters = ChaptersList()
 
-    def addChapter(self):
-        pass
+    def addChapter(self, chapter):
+        self.branches.addChapter(chapter)
+        self.chapters.addChapter(chapter)
 
     def __str__(self):
-        self.chapters = 1
-        pass
+        resStr = "%s: %s (%s)\nДата релиза: %s\nСтатус: %s\nСтатус перевода: %s" % (
+            self.type[1],
+            self.name,
+            self.ageRestriction[1],
+            self.releaseDate,
+            self.status[1],
+            self.scanlateStatus[1])
+        return resStr
