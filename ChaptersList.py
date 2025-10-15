@@ -5,13 +5,13 @@ class ChaptersList:
         self.chaptersAmount = 0
         self.extrasAmount = 0
         self.volumesAmount = 0
-        self.chaptersList = [] # id_in_db, volume, number, name
+        self.chaptersList = []
 
     def addChapter(self, chapter):
         self.chaptersList.append(
             [chapter["id"],
-            chapter["vol"],
-            chapter["num"],
+            chapter["volume"],
+            chapter["number"],
             chapter["name"]])
         self.chaptersAmount += 1
         if "." in chapter["num"]:
