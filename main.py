@@ -4,19 +4,11 @@ import os
 import json
 import time
 import random as rand
+from extraFunctions import choiceSleepTime
 
 def getUrlMangaName(url):
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
     return url.split("?")[0][pattern.search(url).start():]
-
-def choiceSleepTime():
-    timeFuncs = [lambda: 3.25 + rand.random(),
-         lambda: 5 + rand.random() * 5,
-         lambda: 10 + rand.random() * 10,
-         lambda: 20 + rand.random() * 7 * rand.choice([1, -1]),
-         lambda: 180 + rand.random() * rand.choice([15, 20, 25]) * rand.choice([1, -1])]
-    funcsWeights = [0.1, 0.45, 0.34, 0.1, 0.01]
-    return rand.choices(timeFuncs, funcsWeights, k = 1)[0]()
 
 def getFirstResponse(url):
     header = {
@@ -201,17 +193,9 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
             timeSleep = choiceSleepTime()
             print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSleep))
             time.sleep(timeSleep)
-        # break
-
-def userDialogueThroughConsole():
-    pass
 
 def main():
-    # url = "https://mangalib.me/ru/manga/141625--bunsin-eulo-jadongsanyan" # Авто-охота с клонами
-    # url = "https://mangalib.me/ru/manga/12668--dwaejiuri-" # Свинарник
-    # url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari" # Монохромная пара
-    # url = "https://mangalib.me/ru/manga/57093--aisha" # Айша
-    url = "https://mangalib.me/ru/manga/52978--bibliomania"
+    url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari"
     collectMangaInfo(url)
     branchesInfo, numbersByVolumes = getTranslateBranchesInfo(url)
     printBranchesInfo(branchesInfo)
