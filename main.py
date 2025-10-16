@@ -1,24 +1,36 @@
+from extraFunctions import choiceSleepTime
 import re
 import requests
 import os
 import json
 import time
-import random as rand
-from extraFunctions import choiceSleepTime
 
-def getUrlMangaName(url):
+REQUEST_HEADER = {
+    "Client-Time-Zone": "Europe/Moscow",
+    "Content-Type": "application/json",
+    "Referer": "https://mangalib.me/",
+    'sec-ch-ua': "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
+    'sec-ch-ua-mobile': "?0",
+    'sec-ch-ua-platform': "\"Windows\"",
+    'Site-Id': "1",  # important field
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+}
+URL_MANGA_NAME = ""
+
+def setUrlMangaName(url):
+    global URL_MANGA_NAME
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
-    return url.split("?")[0][pattern.search(url).start():]
+    URL_MANGA_NAME = url.split("?")[0][pattern.search(url).start():]
+
+def setRequestHeaderParam(paramKey, paramValue):
+    global REQUEST_HEADER
+    REQUEST_HEADER[paramKey] = paramValue
 
 def getFirstResponse(url):
-    header = {
-        "Referer": "https://mangalib.me/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-    }
-    response = requests.request("GET", url = url, headers = header)
+    response = requests.request("GET", url = url, headers = REQUEST_HEADER)
     return response
 
-def getAboutInfo(urlMangaName, header):
+def getAboutInfo():
     queryParams = {
         "fields[]":
             ["background", "eng_name", "otherNames", "summary", "releaseDate", "type_id", "caution",
@@ -26,52 +38,40 @@ def getAboutInfo(urlMangaName, header):
              "authors", "publisher", "userRating", "moderated", "metadata", "metadata.count",
              "metadata.close_comments", "manga_status_id", "chap_count", "status_id", "artists", "format"]
     }
-    url = "https://api.cdnlibs.org/api/manga/" + urlMangaName
-    response = requests.request("GET", url, headers = header, params = queryParams)
+    url = "https://api.cdnlibs.org/api/manga/" + URL_MANGA_NAME
+    response = requests.request("GET", url, headers = REQUEST_HEADER, params = queryParams)
     return response.json()
 
-def getChaptersInfo(urlMangaName, header):
-    url = "https://api.cdnlibs.org/api/manga/" + urlMangaName + "/chapters"
-    response = requests.request("GET", url, headers = header)
+def getChaptersInfo():
+    url = "https://api.cdnlibs.org/api/manga/" + URL_MANGA_NAME + "/chapters"
+    response = requests.request("GET", url, headers = REQUEST_HEADER)
     return response.json()
 
-def collectMangaInfo(url):
-    urlMangaName = getUrlMangaName(url)
-    url = "https://mangalib.me/ru/manga/" + urlMangaName + "?section=info"
+def collectMangaInfo():
+    url = "https://mangalib.me/ru/manga/" + URL_MANGA_NAME + "?section=info"
     response = getFirstResponse(url)
     if not response.status_code == 200:
         print("Error: %d" % response.status_code)
         return
 
-    if not os.path.exists(urlMangaName):
-        os.mkdir(urlMangaName)
-    header = {
-        "Client-Time-Zone": "Europe/Moscow",
-        "Content-Type": "application/json",
-        "Referer": "https://mangalib.me/",
-        'sec-ch-ua': "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
-        'sec-ch-ua-mobile': "?0",
-        'sec-ch-ua-platform': "\"Windows\"",
-        'Site-Id': "1",  # important field
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-    }
-    aboutInfo = getAboutInfo(urlMangaName, header)
-    with open("%s\\aboutInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
+    if not os.path.exists(URL_MANGA_NAME):
+        os.mkdir(URL_MANGA_NAME)
+    aboutInfo = getAboutInfo()
+    with open("%s\\aboutInfo.json" % URL_MANGA_NAME, "w", encoding = 'utf-8') as file:
         json.dump(aboutInfo, file, ensure_ascii = False, indent = 4)
     # Age Restriction Titles (18+) can not download, because need authorization
     if aboutInfo["data"]["ageRestriction"]["id"] == 4:
         print("Ограничение 18+ : необходима авторизация на сайте")
         return
     # header["Authorization"] = "token"
-    chaptersInfo = getChaptersInfo(urlMangaName, header)
-    with open("%s\\chaptersInfo.json" % urlMangaName, "w", encoding = 'utf-8') as file:
+    chaptersInfo = getChaptersInfo()
+    with open("%s\\chaptersInfo.json" % URL_MANGA_NAME, "w", encoding = 'utf-8') as file:
         json.dump(chaptersInfo, file, ensure_ascii = False, indent = 4)
 
 def getTranslateBranchesInfo(url):
-    urlMangaName = getUrlMangaName(url)
-    if not os.path.exists("%s/chaptersInfo.json" % urlMangaName):
+    if not os.path.exists("%s/chaptersInfo.json" % URL_MANGA_NAME):
         return
-    with open("%s/chaptersInfo.json" % urlMangaName, "r", encoding = "utf-8") as file:
+    with open("%s/chaptersInfo.json" % URL_MANGA_NAME, "r", encoding = "utf-8") as file:
         chaptersInfo = json.load(file)["data"]
     branchesInfo = []
     numbersByVolumes = []
@@ -156,19 +156,8 @@ def userBranchSelection(branchAmount):
         break
     return int(num)
 
-def dowloadChapters(url, branchInfo, numbersByVolumes):
-    urlMangaName = getUrlMangaName(url)
-    url = "https://api.cdnlibs.org/api/manga/%s/chapter" % urlMangaName
-    header = {
-        "Client-Time-Zone": "Europe/Moscow",
-        "Content-Type": "application/json",
-        "Referer": "https://mangalib.me/",
-        'sec-ch-ua': "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"",
-        'sec-ch-ua-mobile': "?0",
-        'sec-ch-ua-platform': "\"Windows\"",
-        'Site-Id': "1",  # important field
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-    }
+def dowloadChapters(branchInfo, numbersByVolumes):
+    url = "https://api.cdnlibs.org/api/manga/%s/chapter" % URL_MANGA_NAME
     queryString = {}
     if branchInfo["id"]:
         queryString["branch_id"] = str(branchInfo["id"])
@@ -180,15 +169,15 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
                 break
         queryString["number"] = chapter
         queryString["volume"] = volume
-        response = requests.request("GET", url, headers = header, params = queryString)
+        response = requests.request("GET", url, headers = REQUEST_HEADER, params = queryString)
         chapterInfo = response.json()
-        savePath = "%s\\vol.%s\\chp.%s" % (urlMangaName, volume, chapter)
+        savePath = "%s\\vol.%s\\chp.%s" % (URL_MANGA_NAME, volume, chapter)
         if not os.path.exists(savePath):
             os.makedirs(savePath)
         for j, page in enumerate(chapterInfo["data"]["pages"]):
             imgUrl = "https://img3.mixlib.me" + page["url"]
-            img = requests.get(imgUrl, headers = header)
-            with open("%s/vol.%s/chp.%s/%d.jpg" % (urlMangaName, volume, chapter, j + 1), 'wb') as file:
+            img = requests.get(imgUrl, headers = REQUEST_HEADER)
+            with open("%s/vol.%s/chp.%s/%d.jpg" % (URL_MANGA_NAME, volume, chapter, j + 1), 'wb') as file:
                 file.write(img.content)
             timeSleep = choiceSleepTime()
             print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSleep))
@@ -196,13 +185,14 @@ def dowloadChapters(url, branchInfo, numbersByVolumes):
 
 def main():
     url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari"
-    collectMangaInfo(url)
+    setUrlMangaName(url)
+    collectMangaInfo()
     branchesInfo, numbersByVolumes = getTranslateBranchesInfo(url)
     printBranchesInfo(branchesInfo)
     branchIndx = 1
     if len(branchesInfo) > 1:
         branchIndx = userBranchSelection(len(branchesInfo))
-    dowloadChapters(url, branchesInfo[branchIndx - 1], numbersByVolumes)
+    dowloadChapters(branchesInfo[branchIndx - 1], numbersByVolumes)
 
 if __name__ == "__main__":
     main()
