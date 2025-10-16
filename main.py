@@ -5,7 +5,7 @@ import os
 import json
 import time
 
-REQUEST_HEADER = {
+REQUEST_HEADERS = {
     "Client-Time-Zone": "Europe/Moscow",
     "Content-Type": "application/json",
     "Referer": "https://mangalib.me/",
@@ -17,21 +17,21 @@ REQUEST_HEADER = {
 }
 URL_MANGA_NAME = ""
 
-def setUrlMangaName(url):
+def setURLMangaName(url):
     global URL_MANGA_NAME
     pattern = re.compile(r"[0-9]+-(-[a-z]+)+", re.I)
     URL_MANGA_NAME = url.split("?")[0][pattern.search(url).start():]
 
-def setRequestHeaderParam(paramKey, paramValue):
-    global REQUEST_HEADER
-    REQUEST_HEADER[paramKey] = paramValue
+def setRequestHeadersParam(paramKey, paramValue):
+    global REQUEST_HEADERS
+    REQUEST_HEADERS[paramKey] = paramValue
 
 def getFirstResponse(url):
-    response = requests.request("GET", url = url, headers = REQUEST_HEADER)
+    response = requests.request("GET", url = url, headers = REQUEST_HEADERS)
     return response
 
 def getAboutInfo():
-    queryParams = {
+    requestParams = {
         "fields[]":
             ["background", "eng_name", "otherNames", "summary", "releaseDate", "type_id", "caution",
              "views", "close_view", "rate_avg", "rate", "genres", "tags", "teams", "user", "franchise",
@@ -39,21 +39,20 @@ def getAboutInfo():
              "metadata.close_comments", "manga_status_id", "chap_count", "status_id", "artists", "format"]
     }
     url = "https://api.cdnlibs.org/api/manga/" + URL_MANGA_NAME
-    response = requests.request("GET", url, headers = REQUEST_HEADER, params = queryParams)
+    response = requests.request("GET", url, headers = REQUEST_HEADERS, params = requestParams)
     return response.json()
 
 def getChaptersInfo():
     url = "https://api.cdnlibs.org/api/manga/" + URL_MANGA_NAME + "/chapters"
-    response = requests.request("GET", url, headers = REQUEST_HEADER)
+    response = requests.request("GET", url, headers = REQUEST_HEADERS)
     return response.json()
 
 def collectMangaInfo():
     url = "https://mangalib.me/ru/manga/" + URL_MANGA_NAME + "?section=info"
-    response = getFirstResponse(url)
+    response = requests.request("GET", url = url, headers = REQUEST_HEADERS)
     if not response.status_code == 200:
-        print("Error: %d" % response.status_code)
+        print("ОШИБКА: %d код" % response.status_code)
         return
-
     if not os.path.exists(URL_MANGA_NAME):
         os.mkdir(URL_MANGA_NAME)
     aboutInfo = getAboutInfo()
@@ -68,81 +67,59 @@ def collectMangaInfo():
     with open("%s\\chaptersInfo.json" % URL_MANGA_NAME, "w", encoding = 'utf-8') as file:
         json.dump(chaptersInfo, file, ensure_ascii = False, indent = 4)
 
-def getTranslateBranchesInfo(url):
+def getTranslateBranchesInfo():
     if not os.path.exists("%s/chaptersInfo.json" % URL_MANGA_NAME):
         return
     with open("%s/chaptersInfo.json" % URL_MANGA_NAME, "r", encoding = "utf-8") as file:
         chaptersInfo = json.load(file)["data"]
-    branchesInfo = []
-    numbersByVolumes = []
-    curVol = "1"
-    numList = []
-    for chapter in chaptersInfo:
-        if curVol == chapter["volume"]:
-            numList.append(chapter["number"])
-        else:
-            curVol = chapter["volume"]
-            numbersByVolumes.append(numList)
-            numList = []
-            numList.append(chapter["number"])
-
+    branchesInfo = {}
+    allTeams = {}
+    chaptersList = []
+    for index, chapter in enumerate(chaptersInfo):
+        chaptersList.append((chapter["volume"], chapter["number"]))
         for branch in chapter["branches"]:
-            idB = branch["branch_id"]
             teams = []
             for team in branch["teams"]:
-                teams.append(team["name"])
-            user = branch["user"]["username"]
-            tempBranch = {"id": idB, "teams": teams, "user": user, "n": chapter["number"]}
-            i = 0
-            for branchElem in branchesInfo:
-                if tempBranch["id"] == branchElem["id"]:
-                    for team in tempBranch["teams"]:
-                        if not team in branchElem["teams"]:
-                            branchesInfo[i]["teams"].append(team)
-                    if not tempBranch["user"] in branchElem["users"]:
-                        branchesInfo[i]["users"].append(tempBranch["user"])
-                    branchesInfo[i]["n"].append(tempBranch["n"])
-                    break
-                i += 1
-            if i == len(branchesInfo):
-                branchesInfo.append(
-                    {"id": tempBranch["id"],
-                     "teams": tempBranch["teams"],
-                     "users": [tempBranch["user"]],
-                     "n": [tempBranch["n"]]}
-                )
-    numbersByVolumes.append(numList)
-    return branchesInfo, numbersByVolumes
+                teams.append(team["id"])
+                allTeams[team["id"]] = team["name"]
+            branchesInfo.setdefault(branch["branch_id"], []).append({
+                "chapter_id": index,
+                "teams": (*teams,),
+                "date": branch["created_at"],
+                "expired_type": branch["expired_type"]})
+    return branchesInfo, chaptersList, allTeams
 
-def printBranchesInfo(branchesInfo):
-    line = "Всего веток: %d\n" % len(branchesInfo)
-    i = 1
-    for branch in branchesInfo:
-        lineB = "Ветка #%d\nКоманды:" % i
-        for team in branch["teams"]:
-            lineB += " %s; " % team
-        lineB += "| Пользователи: "
-        for user in branch["users"]:
-            lineB += "%s; " % user
-        lineB += "\nПереведены: %s" % branch["n"][0]
-        extr = 0
-        for j in range(1, len(branch["n"])):
-            if branch["n"][j].isdigit():
-                if int(branch["n"][j]) - int(branch["n"][j - 1].split(".")[0]) == 1:
+def printBranchesInfo(branchesInfo, chapters, allTeams):
+    infoLine = "Всего веток: %d" % len(branchesInfo)
+    for i, branchID in enumerate(branchesInfo):
+        infoLine += "\nВетка #%d" % (i + 1)
+        branchTeams = list(branchesInfo[branchID][0]["teams"])
+        branchExtras = 0 if chapters[branchesInfo[branchID][0]["chapter_id"]][1].isdigit() else 1
+        translated = "\nПереведены: %s" % chapters[branchesInfo[branchID][0]["chapter_id"]][1]
+        for j in range(1, len(branchesInfo[branchID])):
+            branchTeams.append(*branchesInfo[branchID][j]["teams"])
+            prevNum = chapters[branchesInfo[branchID][j - 1]["chapter_id"]][1]
+            curNum = chapters[branchesInfo[branchID][j]["chapter_id"]][1]
+            if curNum.isdigit():
+                if int(curNum) - int(prevNum.split(".")[0]) == 1:
                     continue
                 else:
-                    if j + 1 < len(branch["n"]) - 1:
-                        lineB += "..%s, %s" % (branch["n"][j], branch["n"][j + 1].split(".")[0])
+                    if j + 1 < len(branchesInfo[branchID]) - 1:
+                        translated += "..%s, %s" % (prevNum.split(".")[0], curNum)
                     else:
                         break
             else:
-                extr += 1
-        lineB += "..%s" % branch["n"][-1].split(".")[0]
-        if extr > 0:
-            lineB += " + %d экстра" % extr
-        line += lineB + "\n"
-        i += 1
-    print(line)
+                branchExtras += 1
+        translated += "..%s" % chapters[branchesInfo[branchID][-1]["chapter_id"]][1].split(".")[0]
+
+        branchTeams = set(branchTeams)
+        infoLine += "\nКоманды: "
+        for teamID in branchTeams:
+            infoLine += allTeams[teamID]
+        if branchExtras > 0:
+            translated += " + %d экстра" % branchExtras
+        infoLine += translated + "\n"
+    print(infoLine)
 
 def userBranchSelection(branchAmount):
     while True:
@@ -156,43 +133,42 @@ def userBranchSelection(branchAmount):
         break
     return int(num)
 
-def dowloadChapters(branchInfo, numbersByVolumes):
+def dowloadChapters(branchInfo, branchID, chaptersList):
     url = "https://api.cdnlibs.org/api/manga/%s/chapter" % URL_MANGA_NAME
-    queryString = {}
-    if branchInfo["id"]:
-        queryString["branch_id"] = str(branchInfo["id"])
-    for chapter in branchInfo["n"]:
-        volume = "1"
-        for i in range(len(numbersByVolumes)):
-            if chapter in numbersByVolumes[i]:
-                volume = str(i + 1)
-                break
-        queryString["number"] = chapter
-        queryString["volume"] = volume
-        response = requests.request("GET", url, headers = REQUEST_HEADER, params = queryString)
+    requestParams = {}
+    if branchID:
+        requestParams["branch_id"] = str(branchID)
+    for chapter in branchInfo:
+        requestParams["number"] = chaptersList[chapter["chapter_id"]][1]
+        requestParams["volume"] = chaptersList[chapter["chapter_id"]][0]
+        response = requests.request("GET", url, headers = REQUEST_HEADERS, params = requestParams)
         chapterInfo = response.json()
-        savePath = "%s\\vol.%s\\chp.%s" % (URL_MANGA_NAME, volume, chapter)
+        savePath = "%s\\vol.%s\\chp.%s" % (URL_MANGA_NAME, requestParams["volume"], requestParams["number"])
         if not os.path.exists(savePath):
             os.makedirs(savePath)
         for j, page in enumerate(chapterInfo["data"]["pages"]):
             imgUrl = "https://img3.mixlib.me" + page["url"]
-            img = requests.get(imgUrl, headers = REQUEST_HEADER)
-            with open("%s/vol.%s/chp.%s/%d.jpg" % (URL_MANGA_NAME, volume, chapter, j + 1), 'wb') as file:
+            img = requests.get(imgUrl, headers = REQUEST_HEADERS)
+            with open("%s/vol.%s/chp.%s/%d.jpg" % (URL_MANGA_NAME, requestParams["volume"], requestParams["number"], j + 1), 'wb') as file:
                 file.write(img.content)
             timeSleep = choiceSleepTime()
-            print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (volume, chapter, j, timeSleep))
+            print("[✔] vol.%s chp.%s p.%d | Now sleep: %.2f sec" % (requestParams["volume"], requestParams["number"], j + 1, timeSleep))
             time.sleep(timeSleep)
+        break
 
 def main():
     url = "https://mangalib.me/ru/manga/214416--monokuro-no-futari"
-    setUrlMangaName(url)
+    setURLMangaName(url)
     collectMangaInfo()
-    branchesInfo, numbersByVolumes = getTranslateBranchesInfo(url)
-    printBranchesInfo(branchesInfo)
+    branchesInfo, chaptersList, allTeams = getTranslateBranchesInfo()
+    printBranchesInfo(branchesInfo, chaptersList, allTeams)
+    branches = []
+    for key in branchesInfo:
+        branches.append(key)
     branchIndx = 1
     if len(branchesInfo) > 1:
         branchIndx = userBranchSelection(len(branchesInfo))
-    dowloadChapters(branchesInfo[branchIndx - 1], numbersByVolumes)
+    dowloadChapters(branchesInfo[branches[branchIndx - 1]], branches[branchIndx - 1], chaptersList)
 
 if __name__ == "__main__":
     main()
