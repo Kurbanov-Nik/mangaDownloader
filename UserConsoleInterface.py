@@ -8,6 +8,8 @@ class ConsoleInterface:
         print("---///   Начало работы   ///---")
         while True:
             entry = input("Укажите ссылку на мангу: ")
+            if not self.mediator.checkURL(entry):
+                continue
             break
         print(r"---\\\ Завершение работы \\\---")
 
