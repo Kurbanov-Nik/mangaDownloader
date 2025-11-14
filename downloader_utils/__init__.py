@@ -1,8 +1,7 @@
-from MangaLib.MangaLib import MangaLib
-from MangaLib.MangaLibSession import MangaLibSessions
+from .MangaLib.MangaLib import MangaLib
+from .MangaLib.MangaLibSession import MangaLibSessions
+from .UserAgentManager import UserAgentManager
 
 SUPPORTED_SITES = {
-    "" : None
+    "mangalib.me" : (MangaLib, MangaLibSessions)
 }
-
-__all__ = ["SUPPORTED_SITES"]

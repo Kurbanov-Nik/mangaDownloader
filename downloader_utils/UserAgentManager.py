@@ -11,7 +11,7 @@ class UserAgentManager:
         self.agentPattern = re.compile(r"^\w+/(?:\d+.?)+ \(.+\) \w+/(?:\d+.?)+.*$", re.I)
         self.checkAgent = True
 
-    def toggleAgentCheck(self):
+    def toggleCheckAgent(self):
         self.checkAgent = not self.checkAgent
 
     def agentCheckStatus(self):
