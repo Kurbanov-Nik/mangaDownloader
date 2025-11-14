@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import requests
 
 class RequestSession(ABC):
     statusCodes = {
@@ -17,13 +18,14 @@ class RequestSession(ABC):
         505: ("HTTP Version Not Supported", "HTTP подключение не поддерживается")
     }
 
+    @property
     @abstractmethod
-    def __init__(self):
-        self.userAgent = None
+    def mainPage(self):
+        pass
 
     @abstractmethod
-    def testRequest(self):
-        ...
+    def __init__(self, agent):
+        self.userAgent = agent
 
     @abstractmethod
     def collectMangaInfo(self):
@@ -32,6 +34,12 @@ class RequestSession(ABC):
     @abstractmethod
     def collectChapters(self):
         ...
+
+    def testRequest(self):
+        response = requests.options(self.mainPage, headers={"User-Agent": self.userAgent})
+        if not response.status_code in self.statusCodes:
+            return -1, ("Error", "Непредвиденная ошибка")
+        return response.status_code, self.statusCodes[response.status_code]
 
     def setUserAgent(self, agent):
         self.userAgent = agent
