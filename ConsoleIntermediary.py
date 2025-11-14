@@ -26,14 +26,21 @@ class ConsoleIntermediary:
     def setupDownloader(self):
         if self.domain:
             self.manga = SUPPORTED_SITES[self.domain][0]()
-            self.session = SUPPORTED_SITES[self.domain][1]()
+            self.session = SUPPORTED_SITES[self.domain][1](self.agent.getAgent())
 
     def checkConnection(self):
-        ...
+        if self.session:
+            code, info = self.session.testRequest()
+            if code != 200:
+                print("%s: %s" % (info[0], info[1]))
+                return False
+            return True
+        return False
+
 
 if __name__ == "__main__":
     obj = ConsoleIntermediary()
     url = "docs-python.ru/"
-    obj.checkURL(url)
+    obj.validateURL(url)
 
     print("/".join("https://war.dog/lol/123".split("/")[0:3]))

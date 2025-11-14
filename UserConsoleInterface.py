@@ -11,7 +11,8 @@ class ConsoleInterface:
             if not self.mediator.validateURL(entry):
                 continue
             self.mediator.setupDownloader()
-            self.mediator.checkConnection()
+            if not self.mediator.checkConnection():
+                continue
             break
         print(r"---\\\ Завершение работы \\\---")
 
