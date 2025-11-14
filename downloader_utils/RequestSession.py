@@ -18,6 +18,10 @@ class RequestSession(ABC):
     }
 
     @abstractmethod
+    def __init__(self):
+        self.userAgent = None
+
+    @abstractmethod
     def testRequest(self):
         ...
 
@@ -28,3 +32,6 @@ class RequestSession(ABC):
     @abstractmethod
     def collectChapters(self):
         ...
+
+    def setUserAgent(self, agent):
+        self.userAgent = agent
